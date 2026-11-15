@@ -827,14 +827,18 @@ const P = [
     stack:['MATLAB','Simulink','Simulink Coder','Python','XGBoost','Raspberry Pi 5','TCP'] },
   { id:'kws', cat:'Digital design', ctx:'ENIT · 2026', st:'wip', trace:'clock',
     t:'Keyword Spotting on Zynq-7000',
-    s:'Real-time "yes / no" detection on a Zybo board: audio acquired in VHDL, MFCC and neural inference on the ARM core.',
-    kpi:'Codec I²C + I²S validated on hardware',
-    spec:[['Board','Zybo Zynq-7000'],['Codec','SSM2603'],['MCLK','12.288 MHz'],['Model','MLP on Speech Commands']],
-    pts:['Wrote an I²C master in VHDL to configure the SSM2603 codec; every byte acknowledged, verified with ILA triggers.',
-         'Built an I²S receiver; traced a silent bus to a missing master clock and fixed it with a Clocking Wizard at 12.288 MHz.',
-         'Now moving samples through a FIFO and AXI to the Cortex-A9 for MFCC extraction in C.',
-         'In parallel: MFCC + MLP trained in Python / Keras on Google Speech Commands, weights to be ported to the ARM.'],
-    stack:['VHDL','Vivado','Vivado SDK','C','ILA','TensorFlow'] },
+    s:'Real-time "yes / no" detection on a Zybo board: audio acquired in VHDL, MFCC and neural inference in bare-metal C on the ARM core.',
+    kpi:'Running end to end on hardware · 48 kHz',
+    spec:[['Board','Zybo · Zynq-7010'],['Audio','SSM2603 · I²S 24 bit · 48 kHz'],['PS ↔ PL','Custom AXI4-Lite + BRAM FIFO'],['Model','13 MFCC → MLP 128-64-32-3']],
+    pts:['VHDL I²C master and register sequencer configure the SSM2603 codec (mic or line input selectable at run time).',
+         'I²S receiver oversampled in the 100 MHz domain, 8192-sample BRAM FIFO and a custom AXI4-Lite slave read by the Cortex-A9.',
+         'MFCC (FFT, 26 mel filters, DCT) and MLP inference written in C; checked against librosa to 2·10⁻⁴.',
+         'Model trained in TensorFlow / Keras on Google Speech Commands and exported to a C header.',
+         'Self-checking GHDL testbench; fully scripted Vivado / SDK build and JTAG launch.',
+         'Debugged a crash before main() with XSCT breakpoints, stepping and a DDR read-back test: wrong board preset.'],
+    stack:['VHDL','Vivado','AXI4-Lite','I²S / I²C','C','TensorFlow','GHDL','XSCT'],
+    img:'assets/kws_block_design.png',
+    link:'https://github.com/ramidr45/kws-zybo-fpga' },
   { id:'axi', cat:'Digital design', ctx:'ENIT · May 2026', st:'done', trace:'iir',
     t:'AXI4-Lite IP with IIR Low-pass Filter',
     s:'Custom AXI4-Lite peripheral wrapping a recursive low-pass filter on a Zybo Z7-10, driven from the ARM core.',
@@ -1087,7 +1091,9 @@ grid.addEventListener('click', e => {
       <p>${p.s}</p>
       <div class="spec">${p.spec.map(([k,v])=>`<div><small>${k}</small><b>${v}</b></div>`).join('')}</div>
       <ul class="pts">${p.pts.map(x=>`<li>${x}</li>`).join('')}</ul>
+      ${p.img?`<img src="${p.img}" alt="${p.t}: Vivado block design" loading="lazy" style="width:100%;border-radius:12px;border:1px solid var(--line-2);margin:14px 0;background:#fff">`:''}
       <div class="stack" style="display:flex;flex-wrap:wrap;gap:6px">${p.stack.map(s=>`<span class="chip">${s}</span>`).join('')}</div>
+      ${p.link?`<p style="margin-top:16px"><a class="btn magnetic" href="${p.link}" target="_blank" rel="noopener">Source code on GitHub ↗</a></p>`:''}
     </div>`;
   dlg.showModal();
   if (lenis) lenis.stop();
